@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     }
 
     // Aapka Pastebin DEV Key yaha dalein
-    const API_DEV_KEY = 'YAHAN_APNA_DEV_KEY_DALEN'; 
+    const API_DEV_KEY = 'lnDNyxEHrqmM-w0PTVR4AiMg8PpkimUa'; 
 
     try {
         const { action, ...otherParams } = req.body; // Frontend se data lena
