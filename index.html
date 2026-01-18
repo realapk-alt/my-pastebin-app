@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Pastebin Manager</title>
+    <style>
+        :root { --primary: #04AA6D; --bg: #f2f2f2; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); display: flex; justify-content: center; padding: 20px; }
+        .container { background: white; width: 100%; max-width: 500px; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
+        input, textarea, button { width: 100%; box-sizing: border-box; margin-bottom: 15px; padding: 12px; border: 1px solid #ddd; border-radius: 5px; }
+        button { background: var(--primary); color: white; border: none; cursor: pointer; font-size: 16px; font-weight: bold; }
+        button:hover { opacity: 0.9; }
+        .hidden { display: none; }
+        .paste-item { background: #fafafa; border-left: 5px solid var(--primary); padding: 10px; margin-bottom: 10px; border-radius: 4px; }
+        .paste-item a { text-decoration: none; color: var(--primary); font-weight: bold; }
+        .header-row { display: flex; justify-content: space-between; align-items: center; }
+        .logout-btn { background: #ff4d4d; width: auto; padding: 5px 10px; font-size: 12px; }
+        #loading { text-align: center; color: #666; font-style: italic; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Pastebin Manager</h2>
+
+    <div id="loginSection">
+        <p>Enter your Pastebin credentials to start.</p>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="handleLogin()">Login</button>
+    </div>
+
+    <div id="dashboard" class="hidden">
+        <div class="header-row">
+            <h3>New Paste</h3>
+            <button onclick="logout()" class="logout-btn">Logout</button>
+        </div>
+        
+        <input type="text" id="pasteTitle" placeholder="Paste Title (e.g., My Code)">
+        <textarea id="pasteCode" rows="6" placeholder="Paste your content here..."></textarea>
+        <button onclick="createPaste()">Publish Paste</button>
+        <p id="msg" style="text-align:center; font-weight:bold;"></p>
+
+        <hr>
+        <h3>Recent Pastes <button onclick="loadPastes()" style="width:auto; float:right; padding:5px; font-size:12px;">Refresh</button></h3>
+        <div id="loading">Loading...</div>
+        <div id="pasteList"></div>
+    </div>
+</div>
+
+<script>
+    // Check if user is already logged in
+    let userKey = localStorage.getItem('pb_user_key');
+    if (userKey) showDashboard();
+
+    // --- API HANDLER ---
+    async function apiRequest(action, data = {}) {
+        document.getElementById('loading').style.display = 'block';
+        
+        try {
+            const payload = { action, ...data };
+            const res = await fetch('/api/proxy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+            document.getElementById('loading').style.display = 'none';
+            return result;
+        } catch (err) {
+            document.getElementById('loading').style.display = 'none';
+            alert("Network Error");
+            return { status: 'error' };
+        }
+    }
+
+    // --- FUNCTIONS ---
+    async function handleLogin() {
+        const u = document.getElementById('username').value;
+        const p = document.getElementById('password').value;
+        if(!u || !p) return alert("Please fill all fields");
+
+        const res = await apiRequest('login', { username: u, password: p });
+
+        if (res.status === 'success') {
+            userKey = res.payload;
+            localStorage.setItem('pb_user_key', userKey);
+            showDashboard();
+        } else {
+            alert("Login Failed: " + (res.message || "Check credentials"));
+        }
+    }
+
+    async function createPaste() {
+        const title = document.getElementById('pasteTitle').value;
+        const code = document.getElementById('pasteCode').value;
+        if(!code) return alert("Code cannot be empty");
+
+        const res = await apiRequest('create', { user_key: userKey, title, code });
+
+        if (res.status === 'success') {
+            document.getElementById('msg').innerHTML = `<span style="color:green">Success! <a href="${res.payload}" target="_blank">Open Link</a></span>`;
+            document.getElementById('pasteCode').value = "";
+            loadPastes();
+        } else {
+            document.getElementById('msg').innerHTML = `<span style="color:red">Error: ${res.message}</span>`;
+        }
+    }
+
+    async function loadPastes() {
+        const listDiv = document.getElementById('pasteList');
+        listDiv.innerHTML = '';
+        
+        const res = await apiRequest('list', { user_key: userKey });
+
+        if (res.status === 'success' && res.data.length > 0) {
+            res.data.forEach(p => {
+                listDiv.innerHTML += `
+                    <div class="paste-item">
+                        <div style="font-weight:bold;">${p.title || 'Untitled'}</div>
+                        <div style="font-size:12px; color:#666;">${p.date}</div>
+                        <a href="${p.url}" target="_blank">View Paste</a>
+                    </div>`;
+            });
+        } else {
+            listDiv.innerHTML = '<p style="text-align:center">No pastes found.</p>';
+        }
+    }
+
+    function showDashboard() {
+        document.getElementById('loginSection').classList.add('hidden');
+        document.getElementById('dashboard').classList.remove('hidden');
+        loadPastes();
+    }
+
+    function logout() {
+        localStorage.removeItem('pb_user_key');
+        location.reload();
+    }
+</script>
+
+</body>
+</html>
