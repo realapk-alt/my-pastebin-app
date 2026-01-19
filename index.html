@@ -3,275 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WormGPT iOS</title>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <title>Universal Downloader</title>
     <style>
-        /* --- iOS & Glass Theme Setup --- */
         :root {
             --bg-dark: #000000;
             --glass-bg: rgba(30, 30, 30, 0.6);
             --glass-border: rgba(255, 255, 255, 0.1);
-            --accent-gradient: linear-gradient(135deg, #0A84FF, #5E5CE6);
-            --bot-bg: rgba(255, 255, 255, 0.1);
+            --accent-gradient: linear-gradient(135deg, #FF2E63, #FF99C8); /* Instagram/Pinterest Vibe */
+            --ig-gradient: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+            --pin-color: #E60023;
             --text-primary: #ffffff;
-            --text-secondary: #8E8E93;
         }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0; padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Roboto, sans-serif;
             background-color: var(--bg-dark);
             color: var(--text-primary);
-            height: 100dvh; /* Dynamic Height for Mobile */
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+            min-height: 100vh;
+            display: flex; flex-direction: column; align-items: center;
         }
 
-        /* Ambient Background Orbs (Glowing effect) */
+        /* Ambient Glow */
         .ambient-light {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at 20% 30%, rgba(10, 132, 255, 0.2), transparent 40%),
-                        radial-gradient(circle at 80% 80%, rgba(94, 92, 230, 0.2), transparent 40%);
-            z-index: -1;
-            filter: blur(40px);
+            position: fixed; top: -20%; left: -20%; width: 150%; height: 150%;
+            background: radial-gradient(circle at 50% 50%, rgba(220, 39, 67, 0.15), transparent 60%);
+            z-index: -1; pointer-events: none;
         }
 
-        /* --- Header --- */
         header {
-            padding: 15px 20px;
-            text-align: center;
-            font-weight: 600;
-            font-size: 18px;
-            letter-spacing: -0.5px;
-            background: rgba(20, 20, 20, 0.8);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            padding: 20px; font-size: 20px; font-weight: 700;
+            letter-spacing: -0.5px; text-align: center; width: 100%;
+            background: rgba(20, 20, 20, 0.8); backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--glass-border);
-            position: sticky;
-            top: 0;
-            z-index: 10;
+            position: sticky; top: 0; z-index: 10;
         }
 
-        /* --- Chat Area --- */
-        #chat-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            scroll-behavior: smooth;
+        .container {
+            width: 90%; max-width: 500px; margin-top: 30px;
+            display: flex; flex-direction: column; gap: 20px;
         }
 
-        .message {
-            max-width: 85%;
-            padding: 12px 16px;
-            border-radius: 18px;
-            font-size: 16px;
-            line-height: 1.5;
-            position: relative;
-            word-wrap: break-word;
-            animation: fadeIn 0.3s ease;
+        /* Platform Switcher */
+        .toggle-container {
+            display: flex; background: rgba(255,255,255,0.1);
+            padding: 5px; border-radius: 12px;
         }
-
-        /* Animation */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .toggle-btn {
+            flex: 1; padding: 12px; border: none; background: transparent;
+            color: #aaa; font-weight: 600; border-radius: 8px; cursor: pointer;
+            transition: all 0.3s ease;
         }
-
-        /* Bot Message Style (Glassy Grey) */
-        .bot {
-            align-self: flex-start;
-            background: var(--bot-bg);
-            border: 1px solid var(--glass-border);
-            border-bottom-left-radius: 4px;
-            color: #efefef;
+        .toggle-btn.active {
+            color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
+        
+        /* Dynamic Colors for active toggle */
+        #btn-ig.active { background: var(--ig-gradient); }
+        #btn-pin.active { background: var(--pin-color); }
 
-        /* User Message Style (iOS Blue Gradient) */
-        .user {
-            align-self: flex-end;
-            background: var(--accent-gradient);
-            border-bottom-right-radius: 4px;
-            color: white;
-            box-shadow: 0 4px 15px rgba(10, 132, 255, 0.3);
+        /* Input Area */
+        .input-box {
+            background: rgba(30,30,30,0.8); border: 1px solid var(--glass-border);
+            border-radius: 16px; padding: 5px; display: flex; flex-direction: column;
         }
-
-        /* Markdown Styles for Bot */
-        .bot pre {
-            background: rgba(0,0,0,0.5);
-            padding: 10px;
-            border-radius: 10px;
-            overflow-x: auto;
-            margin: 5px 0;
-            border: 1px solid var(--glass-border);
-        }
-        .bot code { font-family: 'Menlo', monospace; font-size: 14px; }
-        .bot p { margin: 0 0 5px 0; }
-        .bot p:last-child { margin: 0; }
-
-        /* --- Input Area --- */
-        .input-area {
-            padding: 15px;
-            background: rgba(20, 20, 20, 0.8);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            border-top: 1px solid var(--glass-border);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding-bottom: max(15px, env(safe-area-inset-bottom)); /* iPhone Home Bar Support */
-        }
-
         input {
-            flex: 1;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid var(--glass-border);
-            padding: 12px 18px;
-            border-radius: 25px;
-            color: white;
-            font-size: 16px;
-            outline: none;
-            transition: all 0.2s;
+            width: 100%; padding: 15px; background: transparent; border: none;
+            color: white; font-size: 16px; outline: none;
+        }
+        .action-btn {
+            margin: 5px; padding: 12px; border-radius: 12px; border: none;
+            background: white; color: black; font-weight: bold; font-size: 16px;
+            cursor: pointer; transition: transform 0.1s;
+        }
+        .action-btn:active { transform: scale(0.96); }
+
+        /* Result Area */
+        #result-area {
+            margin-top: 20px; display: none; flex-direction: column; gap: 15px;
+            background: rgba(255,255,255,0.05); padding: 15px; border-radius: 16px;
+            border: 1px solid var(--glass-border); animation: slideUp 0.4s ease;
+        }
+        @keyframes slideUp { from {opacity:0; transform:translateY(20px);} to {opacity:1; transform:translateY(0);} }
+
+        video, img {
+            width: 100%; border-radius: 10px; max-height: 500px; object-fit: contain; background: black;
         }
 
-        input:focus {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: rgba(255, 255, 255, 0.3);
+        .dwn-btn {
+            text-decoration: none; text-align: center; display: block;
+            background: #238636; color: white; padding: 12px; border-radius: 10px;
+            font-weight: bold; margin-top: 10px;
         }
 
-        /* Send Button */
-        button {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            border: none;
-            background: var(--accent-gradient);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: transform 0.1s;
-        }
-        
-        button:active { transform: scale(0.9); }
-        
-        button svg { width: 20px; height: 20px; fill: white; margin-left: 2px; }
-
-        /* Typing Dot Animation */
-        .typing {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-left: 15px;
-            margin-bottom: 5px;
-            display: none;
-        }
-        .dot { animation: blink 1.4s infinite both; }
-        .dot:nth-child(2) { animation-delay: 0.2s; }
-        .dot:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes blink { 0% { opacity: 0.2; } 20% { opacity: 1; } 100% { opacity: 0.2; } }
+        #loading { text-align: center; color: #888; display: none; margin-top: 20px; }
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: white; animation: spin 1s ease-in-out infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
     </style>
 </head>
 <body>
 
     <div class="ambient-light"></div>
+    <header>Media Downloader</header>
 
-    <header>
-        REAL APK
-    </header>
+    <div class="container">
+        <div class="toggle-container">
+            <button class="toggle-btn active" id="btn-ig" onclick="setPlatform('ig')">Instagram</button>
+            <button class="toggle-btn" id="btn-pin" onclick="setPlatform('pin')">Pinterest</button>
+        </div>
 
-    <div id="chat-container">
-        <div class="message bot">
-            Hello! I am real apk. Ask me anything.
+        <div class="input-box">
+            <input type="text" id="urlInput" placeholder="Paste Reel Link here...">
+            <button class="action-btn" onclick="fetchMedia()">Download Media</button>
+        </div>
+
+        <div id="loading"><div class="spinner"></div> Processing...</div>
+
+        <div id="result-area">
+            <div id="media-container"></div>
+            <a id="download-link" class="dwn-btn" target="_blank">Download File</a>
         </div>
     </div>
 
-    <div class="typing" id="typingIndicator">
-        AI is thinking<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
-    </div>
+    <script>
+        let currentPlatform = 'ig';
 
-    <div class="input-area">
-        <input type="text" id="userInput" placeholder="Message..." autocomplete="off">
-        <button onclick="sendMessage()" id="sendBtn">
-            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
-        </button>
-    </div>
+        function setPlatform(platform) {
+            currentPlatform = platform;
+            
+            // Toggle UI
+            document.getElementById('btn-ig').className = `toggle-btn ${platform === 'ig' ? 'active' : ''}`;
+            document.getElementById('btn-pin').className = `toggle-btn ${platform === 'pin' ? 'active' : ''}`;
+            
+            // Update Placeholder
+            const ph = platform === 'ig' ? "Paste Instagram Reel Link..." : "Paste Pinterest Link...";
+            document.getElementById('urlInput').placeholder = ph;
+            
+            // Hide result
+            document.getElementById('result-area').style.display = 'none';
+        }
 
-<script>
-    const chatBox = document.getElementById('chat-container');
-    const inputField = document.getElementById('userInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const typingIndicator = document.getElementById('typingIndicator');
+        async function fetchMedia() {
+            const url = document.getElementById('urlInput').value.trim();
+            if (!url) return alert("Please paste a link first!");
 
-    // Enter Key Support
-    inputField.addEventListener("keypress", function(event) {
-        if (event.key === "Enter") { sendMessage(); }
-    });
+            // Show Loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result-area').style.display = 'none';
 
-    async function sendMessage() {
-        const text = inputField.value.trim();
-        if (!text) return;
+            try {
+                const response = await fetch('/api/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ platform: currentPlatform, url: url })
+                });
 
-        // Add User Message
-        addMessage(text, 'user');
-        inputField.value = '';
-        inputField.disabled = true; // Disable input while loading
-        typingIndicator.style.display = 'block';
-        chatBox.scrollTop = chatBox.scrollHeight;
+                const data = await response.json();
+                document.getElementById('loading').style.display = 'none';
 
-        try {
-            // API Call
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text })
-            });
+                if (data.status === 'success') {
+                    showResult(data);
+                } else {
+                    alert('Error: ' + (data.message || 'Failed to fetch'));
+                }
 
-            const data = await response.json();
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                alert('Server Error. Try again.');
+            }
+        }
 
-            // Handle Response
-            if (data.status === 'success') {
-                addMessage(data.response, 'bot');
-            } else {
-                addMessage(`Error: ${data.message || 'Server Error'}`, 'bot');
+        function showResult(data) {
+            const container = document.getElementById('media-container');
+            const dwnLink = document.getElementById('download-link');
+            const resultBox = document.getElementById('result-area');
+            
+            container.innerHTML = '';
+            
+            if (data.video) {
+                container.innerHTML = `<video controls autoplay loop><source src="${data.video}" type="video/mp4"></video>`;
+                dwnLink.href = data.video;
+                dwnLink.innerText = "Download Video";
+            } else if (data.photo) {
+                container.innerHTML = `<img src="${data.photo}" alt="Downloaded Image">`;
+                dwnLink.href = data.photo;
+                dwnLink.innerText = "Download Image";
             }
 
-        } catch (error) {
-            addMessage("Connection failed. Check your internet.", 'bot');
-        } finally {
-            // Re-enable Input
-            inputField.disabled = false;
-            typingIndicator.style.display = 'none';
-            inputField.focus();
+            resultBox.style.display = 'flex';
         }
-    }
-
-    function addMessage(text, sender) {
-        const div = document.createElement('div');
-        div.className = `message ${sender}`;
-        
-        if (sender === 'bot') {
-            div.innerHTML = marked.parse(text); // Convert Markdown
-        } else {
-            div.textContent = text;
-        }
-        
-        chatBox.appendChild(div);
-        
-        // Smooth scroll to bottom
-        setTimeout(() => {
-            chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
-        }, 100);
-    }
-</script>
+    </script>
 
 </body>
 </html>
